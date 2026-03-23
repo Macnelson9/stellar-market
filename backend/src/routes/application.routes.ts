@@ -95,6 +95,19 @@ router.get(
     const { page, limit, status } = req.query as any;
     const skip = (page - 1) * limit;
 
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      select: { clientId: true },
+    });
+    if (!job) {
+      return res.status(404).json({ error: "Job not found." });
+    }
+    if (job.clientId !== req.userId) {
+      return res
+        .status(403)
+        .json({ error: "Not authorized to view applicants for this job." });
+    }
+
     const where: any = { jobId };
     if (status) {
       where.status = status;

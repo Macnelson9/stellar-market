@@ -55,7 +55,16 @@ export const getJobsQuerySchema = paginationSchema.extend({
 
 export const getJobByIdParamSchema = z.object({
   id: z.string().uuid(),
-});
+})
+  .or(
+    z.object({
+      jobId: z.string().uuid(),
+    }),
+  )
+  .transform((params) => {
+    const id = "id" in params ? params.id : params.jobId;
+    return { id, jobId: id };
+  });
 
 export const updateJobStatusSchema = z.object({
   status: jobStatusSchema,

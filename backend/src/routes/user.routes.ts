@@ -277,17 +277,7 @@ router.get(
           throw new Error("User not found");
         }
 
-        const ratings: number[] = user.reviewsReceived.map((r) => r.rating);
-        const averageRating =
-          ratings.length > 0
-            ? ratings.reduce((a, b) => a + b, 0) / ratings.length
-            : 0;
-
-        return {
-          ...user,
-          averageRating: parseFloat(averageRating.toFixed(1)),
-          reviewCount: ratings.length,
-        };
+        return user;
       });
 
       res.set("X-Cache-Hit", hit.toString());

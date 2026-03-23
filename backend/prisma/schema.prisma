@@ -93,6 +93,8 @@ model User {
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
   availability           Boolean   @default(true)
+  averageRating          Float     @default(0)
+  reviewCount            Int       @default(0)
 
   clientJobs     Job[]         @relation("ClientJobs")
   freelancerJobs Job[]         @relation("FreelancerJobs")

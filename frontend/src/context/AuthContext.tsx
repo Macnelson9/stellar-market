@@ -65,10 +65,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setToken(storedToken);
 
     try {
-      const response = await axios.get(`${API}/auth/me`, {
+      const response = await axios.get(`${API}/users/me`, {
         headers: { Authorization: `Bearer ${storedToken}` },
       });
-      const userData = response.data.user;
+      const userData = response.data;
       setUser(userData);
       localStorage.setItem(USER_KEY, JSON.stringify(userData));
     } catch (error) {

@@ -59,8 +59,8 @@ describe("Dispute Management System", () => {
   });
 
   afterAll(async () => {
-    // Cleanup
-    await prisma.disputeVote.deleteMany({});
+
+      await prisma.disputeVote.deleteMany({});
     await prisma.dispute.deleteMany({});
     await prisma.job.deleteMany({ where: { id: jobId } });
     await prisma.user.deleteMany({

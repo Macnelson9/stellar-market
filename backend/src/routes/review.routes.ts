@@ -122,6 +122,14 @@ router.post("/",
       return res.status(403).json({ error: "Not authorized to review this job." });
     }
 
+    // Prevent duplicate reviews for the same job
+    const existing = await prisma.review.findUnique({
+      where: { jobId_reviewerId: { jobId, reviewerId: req.userId! } },
+    });
+    if (existing) {
+      return res.status(409).json({ error: "You have already reviewed this job." });
+    }
+
     const review = await prisma.$transaction(async (tx) => {
       const createdReview = await tx.review.create({
         data: {

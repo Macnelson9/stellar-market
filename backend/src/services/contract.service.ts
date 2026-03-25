@@ -197,6 +197,36 @@ export class ContractService {
   }
 
   /**
+   * Builds an un-signed transaction XDR for extending a milestone deadline.
+   */
+  static async buildExtendDeadlineTx(
+    clientPublicKey: string,
+    jobId: string,
+    milestoneId: number,
+    newDeadline: number,
+  ) {
+    const contract = new Contract(contractId);
+    const account = await server.getAccount(clientPublicKey);
+
+    const tx = new TransactionBuilder(account, {
+      fee: BASE_FEE,
+      networkPassphrase,
+    })
+    .addOperation(
+      contract.call(
+        "extend_deadline",
+        nativeToScVal(BigInt(jobId)),
+        nativeToScVal(milestoneId, { type: "u32" }),
+        nativeToScVal(BigInt(newDeadline))
+      )
+    )
+    .setTimeout(0)
+    .build();
+
+    return tx.toXDR();
+  }
+
+  /**
    * Builds an un-signed transaction XDR for resolving a dispute.
    */
   static async buildResolveDisputeTx(

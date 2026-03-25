@@ -24,6 +24,8 @@ export default function JobDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [disputeModalOpen, setDisputeModalOpen] = useState(false);
+  const [extendingMilestoneId, setExtendingMilestoneId] = useState<string | null>(null);
+  const [extendDeadlineDate, setExtendDeadlineDate] = useState<Record<string, string>>({});
   const [hasApplied, setHasApplied] = useState(false);
   const [applications, setApplications] = useState<Application[]>([]);
   const [loadingApps, setLoadingApps] = useState(false);
@@ -111,6 +113,11 @@ export default function JobDetailPage() {
         endpoint = "/escrow/init-approve";
         payload = { milestoneId };
         type = "APPROVE_MILESTONE";
+      } else if (action === "extend-deadline") {
+        endpoint = "/escrow/init-extend-deadline";
+        const newDeadline = extendDeadlineDate[milestoneId!];
+        payload = { milestoneId, newDeadline };
+        type = "EXTEND_DEADLINE";
       }
 
       // 1. Get XDR from backend
@@ -134,6 +141,7 @@ export default function JobDetailPage() {
         type,
         jobId: id,
         milestoneId,
+        newDeadline: action === "extend-deadline" ? extendDeadlineDate[milestoneId!] : undefined,
         onChainJobId: 1, // Simplified for this task: in production, parse resultXdr or events
       }, {
         headers: { Authorization: `Bearer ${token}` },
@@ -242,7 +250,7 @@ export default function JobDetailPage() {
                     
                     {/* Milestone Actions */}
                     {isClient && milestone.status === "SUBMITTED" && (
-                        <button 
+                        <button
                             disabled={processing}
                             onClick={() => handleEscrowAction("approve", milestone.id)}
                             className="btn-primary py-1.5 text-xs flex items-center gap-2"
@@ -250,6 +258,47 @@ export default function JobDetailPage() {
                             {processing ? <Loader2 className="animate-spin" size={14} /> : <ShieldCheck size={14} />}
                             Approve & Release Funds
                         </button>
+                    )}
+
+                    {/* Extend Deadline — client only, on overdue milestones */}
+                    {isClient && milestone.contractDeadline && new Date(milestone.contractDeadline) < new Date() && milestone.status !== "APPROVED" && (
+                      <div className="mt-2">
+                        {extendingMilestoneId === milestone.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="date"
+                              className="border border-theme-border rounded px-2 py-1 text-xs bg-theme-bg text-theme-text"
+                              min={new Date().toISOString().split("T")[0]}
+                              value={extendDeadlineDate[milestone.id] ?? ""}
+                              onChange={(e) => setExtendDeadlineDate(prev => ({ ...prev, [milestone.id]: e.target.value }))}
+                            />
+                            <button
+                              disabled={processing || !extendDeadlineDate[milestone.id]}
+                              onClick={() => {
+                                void handleEscrowAction("extend-deadline", milestone.id);
+                                setExtendingMilestoneId(null);
+                              }}
+                              className="btn-primary py-1 px-2 text-xs flex items-center gap-1"
+                            >
+                              {processing ? <Loader2 className="animate-spin" size={12} /> : <Clock size={12} />}
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => setExtendingMilestoneId(null)}
+                              className="text-xs text-theme-text hover:text-theme-heading"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setExtendingMilestoneId(milestone.id)}
+                            className="flex items-center gap-1 text-xs text-stellar-blue hover:underline"
+                          >
+                            <Clock size={12} /> Extend Deadline
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

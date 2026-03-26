@@ -168,37 +168,42 @@ router.post("/confirm-tx", authenticate, asyncHandler(async (req: AuthRequest, r
       data: { contractDeadline: new Date(newDeadline) },
     });
   } else if (type === "APPROVE_MILESTONE" && milestoneId) {
-    await prisma.milestone.update({
-      where: { id: milestoneId },
-      data: { status: "APPROVED" }
-    });
-
-    // Check if all milestones are approved to update job status
-    const milestone = await prisma.milestone.findUnique({
-      where: { id: milestoneId },
-      include: { job: true },
-    });
-    const allMilestones = await prisma.milestone.findMany({ where: { jobId: milestone?.jobId } });
-    if (allMilestones.every(m => m.status === "APPROVED")) {
-      await prisma.job.update({
-        where: { id: milestone?.jobId },
-        data: {
-          status: "COMPLETED",
-          escrowStatus: EscrowStatus.COMPLETED
-        }
+    await prisma.$transaction(async (tx) => {
+      // Step 1: Update milestone status
+      const updatedMilestone = await tx.milestone.update({
+        where: { id: milestoneId },
+        data: { status: "APPROVED" },
+        include: { job: true }
       });
-    }
 
-    // Notify the freelancer
-    if (milestone && milestone.job.freelancerId) {
-      await NotificationService.sendNotification({
-        userId: milestone.job.freelancerId,
-        type: NotificationType.MILESTONE_APPROVED,
-        title: "Milestone Approved",
-        message: `Your milestone "${milestone.title}" has been approved and funds released!`,
-        metadata: { jobId: milestone.jobId, milestoneId: milestone.id },
+      if (!updatedMilestone.jobId) return;
+
+      // Step 2: Check if all milestones are approved to update job status
+      const allMilestones = await tx.milestone.findMany({ 
+        where: { jobId: updatedMilestone.jobId } 
       });
-    }
+
+      if (allMilestones.every(m => m.status === "APPROVED")) {
+        await tx.job.update({
+          where: { id: updatedMilestone.jobId },
+          data: {
+            status: "COMPLETED",
+            escrowStatus: EscrowStatus.COMPLETED
+          }
+        });
+      }
+
+      // Step 3: Notify the freelancer (inside transaction for consistency)
+      if (updatedMilestone.job.freelancerId) {
+        await NotificationService.sendNotification({
+          userId: updatedMilestone.job.freelancerId,
+          type: NotificationType.MILESTONE_APPROVED,
+          title: "Milestone Approved",
+          message: `Your milestone "${updatedMilestone.title}" has been approved and funds released!`,
+          metadata: { jobId: updatedMilestone.jobId, milestoneId: updatedMilestone.id },
+        });
+      }
+    });
   }
 
   res.json({ message: "Transaction confirmed and database updated." });

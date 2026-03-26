@@ -264,14 +264,12 @@ router.patch(
     // Determine allowed transitions based on role
     const currentStatus = milestone.status;
     const allowedStatuses = isFreelancer
-      ? freelancerTransitions[currentStatus] || []
-      : clientTransitions[currentStatus] || [];
+      ? (freelancerTransitions[currentStatus] || [])
+      : (clientTransitions[currentStatus] || []);
 
     if (!allowedStatuses.includes(status)) {
       return res.status(403).json({
-        error: isFreelancer
-          ? "Freelancer can only move milestones to IN_PROGRESS or COMPLETED."
-          : "Client can only CANCEL a completed milestone.",
+        error: `Invalid status transition from ${currentStatus} to ${status} for ${isFreelancer ? 'Freelancer' : 'Client'}.`
       });
     }
 

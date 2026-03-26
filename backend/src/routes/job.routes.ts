@@ -293,6 +293,15 @@ router.post("/",
   authenticate,
   validate({ body: createJobSchema }),
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { role: true },
+    });
+
+    if (!user || user.role !== "CLIENT") {
+      return res.status(403).json({ error: "Only clients can post jobs." });
+    }
+
     const { title, description, budget, skills, deadline } = req.body;
 
     const job = await prisma.job.create({

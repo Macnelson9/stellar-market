@@ -252,4 +252,63 @@ export class ContractService {
 
     return tx.toXDR();
   }
+
+  /**
+   * Fetches the on-chain status of a job from the escrow contract.
+   */
+  static async getOnChainJobStatus(onChainJobId: string): Promise<string> {
+    try {
+      const contract = new Contract(contractId);
+      
+      // We use a dummy address for simulation as view functions don't require specific authorization
+      const dummyAddress = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
+      const sourceAccount = await server.getAccount(dummyAddress).catch(() => {
+        // Fallback if account doesn't exist on-chain
+        return {
+          accountId: () => dummyAddress,
+          sequenceNumber: () => "0",
+          incrementSequenceNumber: () => {},
+        } as any;
+      });
+
+      const tx = new TransactionBuilder(sourceAccount, {
+        fee: BASE_FEE,
+        networkPassphrase,
+      })
+      .addOperation(
+        contract.call(
+          "get_job",
+          nativeToScVal(BigInt(onChainJobId))
+        )
+      )
+      .setTimeout(0)
+      .build();
+
+      const simulation = await server.simulateTransaction(tx);
+      
+      if (rpc.Api.isSimulationSuccess(simulation)) {
+        const resultVal = simulation.result!.retval;
+        const job = scValToNative(resultVal);
+        
+        // job.status is an enum variant name if scValToNative was used
+        const status = job.status.toUpperCase();
+        
+        // Map contract status to DB escrow_status
+        switch (status) {
+          case "CREATED": return "UNFUNDED";
+          case "FUNDED":
+          case "INPROGRESS": return "FUNDED";
+          case "COMPLETED": return "COMPLETED";
+          case "DISPUTED": return "DISPUTED";
+          case "CANCELLED": return "CANCELLED";
+          default: return status;
+        }
+      }
+      
+      throw new Error(`Simulation failed for job ${onChainJobId}`);
+    } catch (error) {
+      console.error(`Error fetching on-chain status for job ${onChainJobId}:`, error);
+      throw error;
+    }
+  }
 }

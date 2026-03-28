@@ -56,7 +56,7 @@ describe("Query parameter coercion (string → number)", () => {
     it("should apply defaults when omitted", () => {
       const result = getNotificationsQuerySchema.parse({});
       expect(result.page).toBe(1);
-      expect(result.limit).toBe(10);
+      expect(result.limit).toBe(20);
     });
   });
 

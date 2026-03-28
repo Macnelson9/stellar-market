@@ -104,10 +104,13 @@ export class NotificationService {
     ]);
 
     return {
-      notifications,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit),
+      data: notifications,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 

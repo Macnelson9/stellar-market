@@ -10,7 +10,8 @@ import {
   getJobByIdParamSchema,
   updateJobStatusSchema
 } from "../schemas";
-import { cache, invalidateCache, invalidateCacheKey, generateJobsCacheKey, generateJobCacheKey } from "../lib/cache";
+import { cache, invalidateCache, invalidateCacheKey, generateJobsCacheKey, generateJobCacheKey, generateJobOnChainStatusCacheKey } from "../lib/cache";
+import { ContractService } from "../services/contract.service";
 
 const router = Router();
 /**
@@ -235,7 +236,26 @@ router.get("/:id",
       return res.status(404).json({ error: "Job not found." });
     }
 
-    res.json(job);
+    // Fetch on-chain escrow status if contractJobId is present
+    let escrowStatus = job.escrowStatus as string;
+    
+    if (job.contractJobId) {
+      try {
+        const cacheKey = generateJobOnChainStatusCacheKey(id);
+        const { data: onChainStatus } = await cache(cacheKey, 30, async () => {
+          return await ContractService.getOnChainJobStatus(job.contractJobId!);
+        });
+        escrowStatus = onChainStatus;
+      } catch (error) {
+        console.warn(`Could not fetch on-chain status for job ${id}, falling back to DB:`, error);
+      }
+    }
+
+    res.json({
+      ...job,
+      escrow_status: escrowStatus, // Alias for frontend compatibility
+      escrowStatus: escrowStatus,    // Keep original for consistency
+    });
   })
 );
 

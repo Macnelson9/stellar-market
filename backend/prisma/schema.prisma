@@ -265,8 +265,7 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([createdAt])
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model AuditLog {

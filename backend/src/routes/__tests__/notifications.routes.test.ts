@@ -135,3 +135,50 @@ describe("DELETE /api/notifications (bulk clear)", () => {
     );
   });
 });
+
+describe("GET /api/notifications (pagination)", () => {
+  it("returns paginated notifications with meta object", async () => {
+    const mockNotifications = [
+      { id: "1", title: "Test 1" },
+      { id: "2", title: "Test 2" },
+    ];
+    prismaMock.notification.findMany.mockResolvedValueOnce(mockNotifications);
+    prismaMock.notification.count.mockResolvedValueOnce(25);
+
+    const res = await request(app)
+      .get("/api/notifications?page=1&limit=2")
+      .set(authHeader(USER_TEST_ID));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("data");
+    expect(res.body).toHaveProperty("meta");
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.meta).toEqual({
+      total: 25,
+      page: 1,
+      limit: 2,
+      totalPages: 13,
+    });
+    
+    expect(prismaMock.notification.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 0,
+        take: 2,
+        where: { userId: USER_TEST_ID }
+      })
+    );
+  });
+
+  it("uses default values when no params provided", async () => {
+    prismaMock.notification.findMany.mockResolvedValueOnce([]);
+    prismaMock.notification.count.mockResolvedValueOnce(0);
+
+    const res = await request(app)
+      .get("/api/notifications")
+      .set(authHeader(USER_TEST_ID));
+
+    expect(res.status).toBe(200);
+    expect(res.body.meta.page).toBe(1);
+    expect(res.body.meta.limit).toBe(20);
+  });
+});

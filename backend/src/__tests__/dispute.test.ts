@@ -56,6 +56,13 @@ jest.mock("@prisma/client", () => {
       CANCELLED: "CANCELLED",
       DISPUTED: "DISPUTED",
     } as any,
+    EscrowStatus: {
+      UNFUNDED: "UNFUNDED",
+      FUNDED: "FUNDED",
+      COMPLETED: "COMPLETED",
+      CANCELLED: "CANCELLED",
+      DISPUTED: "DISPUTED",
+    } as any,
   };
 });
 
@@ -92,6 +99,7 @@ const mockJob = {
   clientId,
   freelancerId,
   status: JobStatus.IN_PROGRESS,
+  escrowStatus: "FUNDED",
   client: mockClient,
   freelancer: mockFreelancer,
 };
@@ -114,7 +122,7 @@ const mockDispute = {
   initiator: mockClient,
 };
 
-afterEach(() => jest.clearAllMocks());
+afterEach(() => jest.resetAllMocks());
 
 describe("Dispute Management System", () => {
   describe("createDispute", () => {
@@ -165,7 +173,7 @@ describe("Dispute Management System", () => {
 
       await expect(
         DisputeService.createDispute(jobId, voterId, "I want to dispute this"),
-      ).rejects.toThrow("Only job participants can raise a dispute");
+      ).rejects.toThrow("Not a participant of this job");
     });
 
     it("should reject dispute for job without freelancer", async () => {

@@ -136,3 +136,9 @@ export function generateUserCacheKey(userId: string): string {
 export function generateJobCacheKey(jobId: string): string {
   return `job:single:${jobId}`;
 }
+/**
+ * Generate cache key for job on-chain status
+ */
+export function generateJobOnChainStatusCacheKey(jobId: string): string {
+  return `job:onchain-status:${jobId}`;
+}
